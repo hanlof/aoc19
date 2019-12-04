@@ -3,75 +3,51 @@
 
 struct line {
 	int x; int y;
-	char dir; int len;
-	int index;
+	int len;
+	int index; // for debugging
 	int totsteps;
+	int xdelta;
+	int ydelta;
 };
 
 struct line line1[1024];
 struct line line2[1024];
 
-void printline(struct line l)
-{
-	printf("%d,%d %c%d\n", l.x, l.y, l.dir, l.len);
-}
-
 void read_line(struct line * line)
 {
-	char c;
-	int i;
+	char dir, slask;
+	int len;
 	int j = 0;
 	int x = 0, y = 0;
 	int totsteps = 0;
-	scanf("%c%d", &c, &i);
-	line[j].x = x;
-	line[j].y = y;
-	line[j].dir = c;
-	line[j].len = i;
-	line[j].index = j;
-	line[j].totsteps = totsteps;
-	switch (c) {
-		case 'L': x = x - i; break;
-		case 'R': x = x + i; break;
-		case 'U': y = y - i; break;
-		case 'D': y = y + i; break;
-	}
-	totsteps += i;
-	j++;
-	while (scanf(",%c%d", &c, &i) == 2) {
+
+	while (scanf("%c%d%[,]", &dir, &len, &slask) >= 2) {
 		line[j].x = x;
 		line[j].y = y;
-		line[j].dir = c;
-		line[j].len = i;
+		line[j].len = len;
 		line[j].index = j;
 		line[j].totsteps = totsteps;
-		switch (c) {
-			case 'L': x = x - i; break;
-			case 'R': x = x + i; break;
-			case 'U': y = y - i; break;
-			case 'D': y = y + i; break;
+		switch (dir) {
+			case 'L': x = x - len; line[j].xdelta = -len; break;
+			case 'R': x = x + len; line[j].xdelta =  len; break;
+			case 'U': y = y - len; line[j].ydelta = -len; break;
+			case 'D': y = y + len; line[j].ydelta =  len; break;
 		}
-		totsteps += i;
+		totsteps += len;
 		j++;
 	}
 	line[j].x = 0xFFFFFF;
 	line[j].y = 0xFFFFFF;
 }
 
-int within(int min, int max, int p)
-{
-	if (p < min) return 0;
-	return (p <= max);
-}
-
-struct line closest_man = { .len = 0xFFFFFF, .dir = 'X' };
-struct line closest_tot = { .len = 0xFFFFFF, .dir = 'X' };
+struct line closest_man = { .len = 0xFFFFFF };
+struct line closest_tot = { .len = 0xFFFFFF };
 
 void match(struct line l1, struct line l2)
 {
 	int x, y;
 	int totsteps = l1.totsteps + l2.totsteps;
-	if (l1.dir == 'L' || l1.dir == 'R') {
+	if (l1.ydelta == 0) {
 		x = l2.x;
 		y = l1.y;
 		totsteps += abs(x - l1.x);
@@ -88,85 +64,44 @@ void match(struct line l1, struct line l2)
 		closest_man.x = x;
 		closest_man.y = y;
 		closest_man.len = dist;
-		printf("man! %d,%d/%c%d\t%d,%d/%c%d\t@%d,%d [%d][%d]\n", l1.x, l1.y, l1.dir, l1.len, l2.x, l2.y, l2.dir, l2.len, x, y, l1.index, l2.index);
+		//printf("man! %d,%d/%d\t%d,%d/%d\t@%d,%d [%d][%d]\n", l1.x, l1.y, l1.len, l2.x, l2.y, l2.len, x, y, l1.index, l2.index);
 	}
 	if (totsteps < closest_tot.len) {
 		closest_tot.x = x;
 		closest_tot.y = y;
 		closest_tot.len = totsteps;
-		printf("tot! %d,%d/%c%d\t%d,%d/%c%d\t@%d,%d [%d][%d]\n", l1.x, l1.y, l1.dir, l1.len, l2.x, l2.y, l2.dir, l2.len, x, y, l1.index, l2.index);
+		//printf("tot! %d,%d/%d\t%d,%d/%d\t@%d,%d [%d][%d]\n", l1.x, l1.y, l1.len, l2.x, l2.y, l2.len, x, y, l1.index, l2.index);
 	}
 
 }
 
+int within(int p1, int p2, int p)
+{
+	int min, max;
+	if (p1 < p2) {
+		min = p1;
+		max = p2;
+	} else {
+		min = p2;
+		max = p1;
+	}
+	if (p < min) return 0;
+	return (p <= max);
+}
+
 void intersect(struct line l1, struct line l2)
 {
-	if ((l1.dir == 'L' || l1.dir == 'R') && (l2.dir == 'L' || l2.dir == 'R')) {
-		return;
-	}
-	if ((l1.dir == 'U' || l1.dir == 'D') && (l2.dir == 'U' || l2.dir == 'D')) {
-		return;
-	}
-	if (l1.dir == 'L') {
-		if (within(l1.x - l1.len, l1.x, l2.x)) {
-			if (l2.dir == 'D') {
-				if (within(l2.y, l2.y + l2.len, l1.y)) {
-					match(l1, l2);
-				}
-			}
-			if (l2.dir == 'U') {
-				if (within(l2.y - l2.len, l2.y, l1.y)) {
-					match(l1, l2);
-				}
-			}
+	if (l1.ydelta == 0) {
+		if (l2.ydelta == 0) return;
+		if (within(l1.x, l1.x + l1.xdelta, l2.x) && within(l2.y, l2.y + l2.ydelta, l1.y)) {
+			match(l1, l2);
+		}
+	} else { // if l1.ydelta != 0 then l1.xdelta must be 0, if input can be trusted to not have 0 length
+		if (l2.xdelta == 0) return;
+		if (within(l2.x, l2.x + l2.xdelta, l1.x) && within(l1.y, l1.y + l1.ydelta, l2.y)) {
+			match(l1, l2);
 		}
 	}
-	if (l1.dir == 'R') {
-		if (within(l1.x, l1.x + l1.len, l2.x)) {
-			if (l2.dir == 'D') {
-				if (within(l2.y, l2.y + l2.len, l1.y)) {
-					match(l1, l2);
-				}
-			}
-			if (l2.dir == 'U') {
-				if (within(l2.y - l2.len, l2.y, l1.y)) {
-					match(l1, l2);
-				}
-			}
-		}
-
-	}
-	if (l1.dir == 'D') {
-		if (within(l1.y, l1.y + l1.len, l2.y)) {
-			if (l2.dir == 'L') {
-				if (within(l2.x, l2.x - l2.len, l1.x)) {
-					match(l1, l2);
-				}
-			}
-			if (l2.dir == 'R') {
-				if (within(l2.x, l2.x + l2.len, l1.x)) {
-					match(l1, l2);
-				}
-			}
-		}
-
-	}
-	if (l1.dir == 'U') {
-		if (within(l1.y - l1.len, l1.y, l2.y)) {
-			if (l2.dir == 'L') {
-				if (within(l2.x, l2.x - l2.len, l1.x)) {
-					match(l1, l2);
-				}
-			}
-			if (l2.dir == 'R') {
-				if (within(l2.x, l2.x + l2.len, l1.x)) {
-					match(l1, l2);
-				}
-			}
-		}
-
-	}
-
 }
 
 int main(int argc, char * argv[])
@@ -182,12 +117,12 @@ int main(int argc, char * argv[])
 	while (line1[i + 1].x != 0xFFFFFF) {
 		j = 0;
 		while (line2[j + 1].x != 0xFFFFFF) {
-			//printf("%d %d\n", i, j);
 			intersect(line1[i], line2[j]);
 			j++;
 		}
 		i++;
 	}
-	printline(closest_man);
-	printline(closest_tot);
+
+	printf("Closest manhattan discance intersection: %d\n", abs(closest_man.x) + abs(closest_man.y));
+	printf("Closest total line discance intersection %d\n", closest_tot.len);
 }
