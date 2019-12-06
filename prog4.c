@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-#define START 134792
-#define END 675810
+#include "inputs/input4"
 
 int increasing(char * s)
 {

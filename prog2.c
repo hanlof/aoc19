@@ -4,7 +4,7 @@
 #include "intcode.h"
 
 int intcode_prog[] = {
-#include "input2"
+#include "inputs/input2"
 };
 
 #define MAGIC 19690720

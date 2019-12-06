@@ -4,7 +4,7 @@
 #include "intcode.h"
 
 int intcode_prog[] = {
-#include "input5"
+#include "inputs/input5"
 };
 
 int main(int argc, char * argv[])
