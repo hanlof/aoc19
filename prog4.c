@@ -15,7 +15,6 @@ int increasing(char * s)
 
 int hasdouble(char *s, int isolated)
 {
-	char * s2 = s;
 	int ok = 0;
 	while (s[1] != '\0') {
 		if (s[0] == s[1]) {
@@ -34,7 +33,6 @@ int hasdouble(char *s, int isolated)
 
 int main(int argc, char * argv[])
 {
-	int i = START;
 	int count1 = 0;
 	int count2 = 0;
 	char s[1024] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };

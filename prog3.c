@@ -104,8 +104,6 @@ void check_intersection(struct segment l1, struct segment l2)
 
 int main(int argc, char * argv[])
 {
-	int w;
-	int tot = 0;
 	struct segment line1[1024];
 	struct segment line2[1024];
 

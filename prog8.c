@@ -8,7 +8,7 @@ char pixels[100][25 * 6];
 int main(int argc, char * argv[])
 {
 	int fd = open("inputs/input8", O_RDONLY);
-	int ret = read(fd, pixels, sizeof(pixels));
+	(void)read(fd, pixels, sizeof(pixels));
 	int lowest = 200000;
 	int lowest_layer = 0;
 	for (int i = 0; i < 100; i++) {
@@ -32,12 +32,11 @@ int main(int argc, char * argv[])
 		if (pixels[lowest_layer][i] == '1') ones++;
 		if (pixels[lowest_layer][i] == '2') twos++;
 	}
-	printf("Part1: %d\n", ones, twos, ones * twos);
+	printf("Part1: %d\n", ones * twos);
 
 	// part 2
 	printf("Part2: ...\n");
 	char final[150];
-	char draw[150];
 	for (int i = 99; i >= 0; i--) { // last layer is the lowest!
 		for (int j = 0; j < 150; j++) {
 			char p = pixels[i][j];

@@ -11,7 +11,7 @@ struct planet {
 
 #define HASH(x, y, z) ( 45 * 45 * (x - '0') + 45 * (y - '0') + (z - '0') )
 
-void main(int argc, char * argv[])
+int main(int argc, char * argv[])
 {
 	struct planet * santas_planet = 0; // for part 2. stores where santa is
 	struct planet * my_planet = 0;     // for part 2. stores where I (YOU) am
