@@ -1,22 +1,42 @@
-#define PROG_SIZE(x) (sizeof(x) / sizeof(int))
+#define PROG_SIZE(x) (sizeof(x) / sizeof(int64_t))
 
 #define MAX_OPERANDS 4
 
-int run_prog_output_in_arg(int * prog, int size, int input, int * output)
+#define STACK_SIZE 16
+
+struct stack {
+	int top;
+	int64_t values[STACK_SIZE];
+};
+
+#define POP(x) ((x).values[--(x).top])
+#define PUSH(x, y) ((x).values[(x).top++] = y)
+
+struct fifo {
+	int write;
+	int read;
+	int64_t values[STACK_SIZE];
+};
+
+#define PUT(f, v) ((f).values[(f).write++] = v)
+#define GET(f) ((f).values[(f).read++])
+#define EMPTY(f) ((f).write == (f).read)
+
+int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struct fifo * outputs)
 {
-	int * mem = malloc(size * sizeof(int));
-	memcpy(mem, prog, size * sizeof(int));
-	int * p = &mem[0];
-	int opvals[MAX_OPERANDS] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
-	int * opptrs[MAX_OPERANDS] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
-	int intcode_output = 0;
-	int opcode;
+	int64_t * p = &mem[0];
+	if (prog_ctr) {
+	  p = *prog_ctr;
+	}
+	int64_t opvals[MAX_OPERANDS + 1] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
+	int64_t * opptrs[MAX_OPERANDS + 1] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
+	int64_t opcode;
 	while (1) {
 		opcode = *p % 100;
 		char modestring[MAX_OPERANDS * 2];
-		sprintf(modestring, "%0*d", MAX_OPERANDS, *p / 100);
-		for (int i = 0; modestring[i] != '\0'; i++) {
-			int idx = MAX_OPERANDS - i; // modestring[0] is mode for operand 8, [1] is op 7 and so on...
+		sprintf(modestring, "%0*ld", MAX_OPERANDS, *p / 100);
+		for (int64_t i = 0; modestring[i] != '\0'; i++) {
+			int64_t idx = MAX_OPERANDS - i; // modestring[0] is mode for operand 8, [1] is op 7 and so on...
 			switch (modestring[i]) {
 				case '0': { // normal (mem address)
 					opptrs[idx] = &mem[p[idx]];
@@ -46,12 +66,19 @@ int run_prog_output_in_arg(int * prog, int size, int input, int * output)
 				break;
 			}
 			case 3: { // read input
-				*opptrs[1] = input;
+				if (EMPTY(*inputs)) {
+					*prog_ctr = p;
+					return 3;
+				} else {
+				}
+				*opptrs[1] = GET(*inputs);
+				//printf("in %ld\n", *opptrs[1]);
 				p += 2;
 				break;
 			}
 			case 4: { // output
-				intcode_output = *opptrs[1];
+				//printf("out %ld (%p)\n", *opptrs[1], p);
+				PUT(*outputs, *opptrs[1]);
 				p += 2;
 				break;
 			}
@@ -92,25 +119,10 @@ int run_prog_output_in_arg(int * prog, int size, int input, int * output)
 			}
 
 			case 99: { // exit
-				if (output) *output = mem[0];
-				return intcode_output; break;
+				//printf("exit\n");
+				return 99; break;
 			}
-			default: printf("Illegal instruction %d @ %d\n", opcode, p - mem); *p = 99; break;
+			default: printf("Illegal instruction %li @ %ld\n", opcode, p - mem); *p = 99; break;
 		}
 	}
 }
-
-// add this to keep compatibility with day 2 :-)
-int run_prog_with_input(int * prog, int size, int input)
-{
-	return run_prog_output_in_arg(prog, size, input, NULL);
-}
-
-// this is for day 2
-int run_prog(int * prog, int size)
-{
-	int ret;
-	run_prog_output_in_arg(prog, size, 0, &ret);
-	return ret;
-}
-

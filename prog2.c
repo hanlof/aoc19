@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "intcode.h"
 
-int intcode_prog[] = {
+int64_t intcode_prog[] = {
 #include "inputs/input2"
 };
 
@@ -11,19 +12,24 @@ int intcode_prog[] = {
 int main(int argc, char * argv[])
 {
 	// Part 1
-	intcode_prog[1] = 12;
-	intcode_prog[2] = 2;
-	int ret = run_prog(intcode_prog, PROG_SIZE(intcode_prog));
-	printf("Part 1: %d\n", ret);
+	struct fifo in = { 0, 0 };
+	struct fifo out = { 0, 0 };
+	int64_t * mem = malloc(PROG_SIZE(intcode_prog) * sizeof(int64_t));
+	memcpy(mem, intcode_prog, PROG_SIZE(intcode_prog) * sizeof(int64_t));
+	mem[1] = 12;
+	mem[2] = 2;
+	run_prog(mem, NULL, &in, &out);
+	printf("Part 1: %ld\n", mem[0]);
 
 	// Part 2
-	for (int noun = 0; noun < 99; noun++) {
-		for (int verb = 0; verb < 99; verb++) {
-			intcode_prog[1] = noun;
-			intcode_prog[2] = verb;
-			int ret = run_prog(intcode_prog, PROG_SIZE(intcode_prog));
-			if (ret == MAGIC) {
-				printf("Part 2: %d\n", noun * 100 + verb);
+	for (int64_t noun = 0; noun < 99; noun++) {
+		for (int64_t verb = 0; verb < 99; verb++) {
+			memcpy(mem, intcode_prog, PROG_SIZE(intcode_prog) * sizeof(int64_t));
+			mem[1] = noun;
+			mem[2] = verb;
+			run_prog(mem, NULL, &in, &out);
+			if (mem[0] == MAGIC) {
+				printf("Part 2: %ld\n", noun * 100 + verb);
 			}
 		}
 	}
