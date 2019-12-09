@@ -1,3 +1,7 @@
+#include <stdint.h>
+#include <string.h>
+
+
 #define PROG_SIZE(x) (sizeof(x) / sizeof(int64_t))
 
 #define MAX_OPERANDS 4
@@ -8,7 +12,6 @@ struct stack {
 	int top;
 	int64_t values[STACK_SIZE];
 };
-
 #define POP(x) ((x).values[--(x).top])
 #define PUSH(x, y) ((x).values[(x).top++] = y)
 
@@ -17,10 +20,51 @@ struct fifo {
 	int read;
 	int64_t values[STACK_SIZE];
 };
-
 #define PUT(f, v) ((f).values[(f).write++] = v)
 #define GET(f) ((f).values[(f).read++])
 #define EMPTY(f) ((f).write == (f).read)
+
+// Forward declaration
+int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struct fifo * outputs);
+
+struct intcode_machine {
+	int64_t * mem;
+	int64_t * prog_ctr;
+	struct fifo inputs;
+	struct fifo outputs;
+	struct fifo * inputs_ptr;
+	struct fifo * outputs_ptr;
+	int relative_base;
+};
+
+struct intcode_machine * new_intcode_machine(int64_t * original_intcode, int size, int64_t * inputs, int ninputs, int extra_mem)
+{
+	struct intcode_machine * m = calloc(sizeof(struct intcode_machine), 1);
+	m->mem = calloc(size * sizeof(int64_t), 1 + extra_mem);
+	memcpy(m->mem, original_intcode, size * sizeof(int64_t));
+	m->prog_ctr = &m->mem[0];
+	m->inputs.read = 0;
+	m->inputs.write = 0;
+	m->outputs.read = 0;
+	m->outputs.write = 0;
+	m->inputs_ptr = &m->inputs;
+	m->outputs_ptr = &m->outputs;
+	m->relative_base = 0;
+
+	for (int i = 0; i < ninputs; i++)
+		PUT(m->inputs, inputs[i]);
+
+	return m;
+}
+
+#define _I(...) {__VA_ARGS__}
+#define NEW_INTCODE_MACHINE(m, i) new_intcode_machine(m, PROG_SIZE(m), ((int64_t[])i), (sizeof((int64_t[])i) / sizeof(int64_t)), 0)
+#define NEW_INTCODE_MACHINE_EMEM(m, i, emem) new_intcode_machine(m, PROG_SIZE(m), ((int64_t[])i), (sizeof((int64_t[])i) / sizeof(int64_t)), emem)
+
+int64_t run_machine(struct intcode_machine * m)
+{
+	return run_prog(m->mem, &m->prog_ctr, m->inputs_ptr, m->outputs_ptr);
+}
 
 int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struct fifo * outputs)
 {
@@ -31,6 +75,7 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 	int64_t opvals[MAX_OPERANDS + 1] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
 	int64_t * opptrs[MAX_OPERANDS + 1] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
 	int64_t opcode;
+	int baseoffset = 0;
 	while (1) {
 		opcode = *p % 100;
 		char modestring[MAX_OPERANDS * 2];
@@ -45,6 +90,10 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 				case '1': { // immediate
 					opvals[idx] = p[idx];
 					opptrs[idx] = &opvals[idx];
+					break;
+				}
+				case '2': { // relative baseptr
+					opptrs[idx] = &mem[p[idx] + baseoffset];
 					break;
 				}
 				default: {
@@ -115,6 +164,11 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 					*opptrs[3] = 0;
 				}
 				p += 4;
+				break;
+			}
+			case 9: { // adjust base offset
+				baseoffset += *opptrs[1];
+				p += 2;
 				break;
 			}
 
