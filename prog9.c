@@ -9,11 +9,11 @@ int main(int argc, char * argv[])
 {
 	struct intcode_machine * m;
 
-	m = NEW_INTCODE_MACHINE(intcode_prog, _I(1));
+	m = NEW_INTCODE_MACHINE_EMEM(intcode_prog, _I(1), 5);
 	run_machine(m);
 	printf("Part 1: %ld\n", GET(*(m->outputs_ptr)));
 
-	m = NEW_INTCODE_MACHINE(intcode_prog, _I(2));
+	m = NEW_INTCODE_MACHINE_EMEM(intcode_prog, _I(2), 5);
 	run_machine(m);
 	printf("Part 2: %ld\n", GET(*(m->outputs_ptr)));
 

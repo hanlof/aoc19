@@ -1,7 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
 #include "intcode.h"
 
 int64_t intcode_prog[] = {
@@ -10,25 +7,19 @@ int64_t intcode_prog[] = {
 
 int main(int argc, char * argv[])
 {
+	struct intcode_machine * m;
+	m = NEW_INTCODE_MACHINE(intcode_prog, _I(1));
+	run_machine(m);
+	// need to get the final output (many outputs are emitted)
 	int64_t ret = 0;
-	struct fifo in = { 0, 0 };
-	struct fifo out = { 0, 0 };
-	int64_t * mem = malloc(PROG_SIZE(intcode_prog) * sizeof(int64_t));
-	memcpy(mem, intcode_prog, PROG_SIZE(intcode_prog) * sizeof(int64_t));
-	PUT(in, 1);
-	run_prog(mem, NULL, &in, &out);
-	while (!EMPTY(out)) {
-		ret = GET(out);
+	while (!EMPTY(m->outputs)) {
+	       ret = GET(m->outputs);
 	}
 	printf("Part 1: %ld\n", ret);
 
-	// part 2
-	memcpy(mem, intcode_prog, PROG_SIZE(intcode_prog) * sizeof(int64_t));
-	PUT(in, 5);
-	run_prog(mem, NULL, &in, &out);
-	while (!EMPTY(out)) {
-		ret = GET(out);
-	}
-	printf("Part 2: %ld\n", ret);
+	m = NEW_INTCODE_MACHINE(intcode_prog, _I(5));
+	run_machine(m);
+	printf("Part 2: %ld\n", GET(*(m->outputs_ptr)));
+
 	return 0;
 }

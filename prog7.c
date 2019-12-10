@@ -1,7 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
 #include "intcode.h"
 
 int64_t intcode_prog[] = {
@@ -13,29 +10,27 @@ int64_t highest_feedback = 0;
 
 void run_feedbackloop(struct stack * order) {
 	int64_t ret = 0;
-	int64_t * progs[5];
-	int64_t * progctrs[5];
-	struct fifo infifos[5];
+	struct intcode_machine * m[5];
+
 	for (int i = 0; i < 5; i++) {
-		infifos[i].read = 0;
-		infifos[i].write = 0;
-		PUT(infifos[i], order->values[i] + 5); // set phase here
-		progs[i] = malloc(PROG_SIZE(intcode_prog) * sizeof(int64_t));
-		memcpy(progs[i], intcode_prog, PROG_SIZE(intcode_prog) * sizeof(int64_t));
-		progctrs[i] = &progs[i][0];
+		m[i] = NEW_INTCODE_MACHINE(intcode_prog, _I(order->values[i] + 5));
 	}
-	PUT(infifos[0], 0);
+	for (int i = 0; i < 5; i++) {
+		m[i]->outputs_ptr = m[(i + 1) % 5]->inputs_ptr; // connect outputs to inputs
+	}
+
+	PUT(m[0]->inputs, 0); // initial value 0 in first machine
 	do {
-		run_prog(progs[0], &progctrs[0], &infifos[0], &infifos[1]);
-		run_prog(progs[1], &progctrs[1], &infifos[1], &infifos[2]);
-		run_prog(progs[2], &progctrs[2], &infifos[2], &infifos[3]);
-		run_prog(progs[3], &progctrs[3], &infifos[3], &infifos[4]);
-		ret = run_prog(progs[4], &progctrs[4], &infifos[4], &infifos[0]);
+		run_machine(m[0]);
+		run_machine(m[1]);
+		run_machine(m[2]);
+		run_machine(m[3]);
+		ret = run_machine(m[4]);
 	} while (ret != 99);
 
-	int res = GET(infifos[0]);
-	if (res > highest_feedback) {
-		highest_feedback = res;
+	ret = GET(m[0]->inputs);
+	if (ret > highest_feedback) {
+		highest_feedback = ret;
 	}
 }
 
@@ -53,7 +48,7 @@ void runall(int64_t * set, int64_t firstinput, int nelements, struct stack * per
 		int64_t o = *tmpset;
 		*tmpset = -2;
 		PUSH(*perms, o);
-		if (nelements == 1) { // we have a permutation of 4 in perms
+		if (nelements == 1) { // runall() was called with 4 permutations in perms and we just pushed the final one
 			run_feedbackloop(perms);
 		} else { // we don't have a complete permutation in perms, keep recursing!
 			runall(set, ret, nelements - 1, perms);

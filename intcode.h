@@ -51,8 +51,9 @@ struct intcode_machine * new_intcode_machine(int64_t * original_intcode, int siz
 	m->outputs_ptr = &m->outputs;
 	m->relative_base = 0;
 
-	for (int i = 0; i < ninputs; i++)
+	for (int i = 0; i < ninputs; i++) {
 		PUT(m->inputs, inputs[i]);
+	}
 
 	return m;
 }
@@ -116,6 +117,7 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 			}
 			case 3: { // read input
 				if (EMPTY(*inputs)) {
+					//printf("exit becuse missing indata\n");
 					*prog_ctr = p;
 					return 3;
 				} else {
