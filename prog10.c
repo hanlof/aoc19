@@ -9,25 +9,19 @@
 #define SIZE_Y 26
 #define SIZE_B (SIZE_Y * (SIZE_X + 1))
 
-struct p {
+struct asteroid {
 	int x;
 	int y;
 	double angle;
 };
 
-int comp(const void * x, const void * y)
+int angle_comparator(const void * ap, const void * bp)
 {
-	struct p * a = *((struct p **)x);
-	struct p * b = *((struct p **)y);
-	return a->angle < b->angle;
+	return ( *((struct asteroid **)ap) )->angle < ( *((struct asteroid **)bp) )->angle;
 }
 
 
-int zap(int ox, int oy, char map[SIZE_Y][SIZE_X + 1])
-{
-	map[25][26] = '\0';
-	struct p points[300];
-	struct p * ptrs[300];
+void mark_visible(int ox, int oy, char map[SIZE_Y][SIZE_X + 1]) {
 	for (int y = 0; y < SIZE_Y; y++) {
 		for (int x = 0; x < SIZE_X; x++) {
 			int dx = x - ox;
@@ -51,60 +45,46 @@ int zap(int ox, int oy, char map[SIZE_Y][SIZE_X + 1])
 			}
 		}
 	}
-	map[oy][ox] = 'O';
-	int count = 0;
+	map[oy][ox] = 'O'; // also "unmark" the one we're counting from
+}
+int zap(int ox, int oy, char map[SIZE_Y][SIZE_X + 1], int which)
+{
+	struct asteroid asteroids[300]; // we happen to know 300 is enough... :D
+	struct asteroid * ptrs[300];
+	which--; // cause we input a one-indexed number. just because...
+
+	mark_visible(ox, oy, map);
+
+	// collect all visible asteroids  in a list
+	// make a separate list if pointers to each asteroid, so we can sort the pointers and not the point structs
 	int index = 0;
 	for (int y = 0; y < SIZE_Y; y++) {
 		for (int x = 0; x < SIZE_X; x++) {
 			if (map[y][x] == '#') {
-				points[index].x = x;
-				points[index].y = y;
 				int dx = x - ox;
 				int dy = y - oy;
-				points[index].angle = atan2(dx, dy);
-				ptrs[index] = &points[index];
+				asteroids[index].x = x;
+				asteroids[index].y = y;
+				asteroids[index].angle = atan2(dx, dy);
+				ptrs[index] = &asteroids[index];
 
 				index++;
-				//printf("%f %d,%d\n", atan2(dx, dy), x, y);
 			}
 		}
 	}
-	qsort(ptrs, index, sizeof(struct p *), comp);
-	for (int i = i; i < index; i++) {
-		printf("%d: %d, %f\n", i, ptrs[i]->x * 100 + ptrs[i]->y, ptrs[i]->angle);
-	}
+	// sort list by angle
+	qsort(ptrs, index, sizeof(struct asteroid *), angle_comparator);
 
-	return count;
+	// return whatever index the caller asked for (with 100*x+y encoding)
+	return 100 * ptrs[which]->x + ptrs[which]->y;
 }
 
-int check(int ox, int oy, char map[SIZE_Y][SIZE_X + 1])
+int count_visible(int ox, int oy, char map[SIZE_Y][SIZE_X + 1])
 {
-	map[25][26] = '\0';
-	for (int y = 0; y < SIZE_Y; y++) {
-		for (int x = 0; x < SIZE_X; x++) {
-			int dx = x - ox;
-			int dy = y - oy;
-			if (!dx && !dy) continue;
-			int tx = x;
-			int ty = y;
-			int b = 0;
-			while (tx >= 0 && tx < SIZE_X && ty >= 0 && ty < SIZE_Y) {
-				if (!b && map[ty][tx] == '#') {
-					b = 1;
-					tx += dx;
-					ty += dy;
-					continue;
-				}
-				if (b) {
-					map[ty][tx] = 'b';
-				}
-				tx += dx;
-				ty += dy;
-			}
-		}
-	}
-	map[oy][ox] = 'O';
 	int count = 0;
+
+	mark_visible(ox, oy, map);
+
 	for (int y = 0; y < SIZE_Y; y++) {
 		for (int x = 0; x < SIZE_X; x++) {
 			if (map[y][x] == '#') {
@@ -113,7 +93,6 @@ int check(int ox, int oy, char map[SIZE_Y][SIZE_X + 1])
 		}
 	}
 
-//	printf("%s\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n", &map[0][0]);
 	return count;
 }
 
@@ -122,34 +101,27 @@ int main(int argc, char * argv[])
 	char omap[SIZE_Y][SIZE_X + 1];
 	char tmap[SIZE_Y][SIZE_X + 1];
 
-	int ret = read(STDIN_FILENO, omap, SIZE_B);
-	(void) ret;
+	(void) read(STDIN_FILENO, omap, SIZE_B);
 	memcpy(tmap, omap, SIZE_B);
-	int count = 0;
-	int e = 0;
-	for (int i = 0; i < SIZE_B; i++) {
-		if (((char*)omap)[i] == '#') count++;
-		if (((char*)omap)[i] == '.') e++;
-	}
 
-
-	int detectable = 0;
+	int highest_visible = 0;
 	int best_x = 0; int best_y = 0;
 	for (int y = 0; y < SIZE_Y; y++) {
 		for (int x = 0; x < SIZE_X; x++) {
 			if (omap[y][x] != '#') continue;
 			memcpy(tmap, omap, SIZE_B);
-			int c = check(x, y, tmap);
-			if (c > detectable) {
-				detectable = c;
+			int c = count_visible(x, y, tmap);
+			if (c > highest_visible) {
+				highest_visible = c;
 				best_x = x;
 				best_y = y;
 			}
 		}
 	}
-	printf(">> %d %d,%d\n", detectable, best_x, best_y);
+	printf("Part1: %d\n", highest_visible);
+
 	memcpy(tmap, omap, SIZE_B);
-	printf("%d\n", zap(best_x, best_y, tmap));
-	printf("%s\nYYYYYYYYYYYYYY\n", &tmap[0][0]);
+	int twohundredth = zap(best_x, best_y, tmap, 200);
+	printf("Part2: %d\n", twohundredth);
 	return 0;
 }
