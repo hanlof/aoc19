@@ -15,17 +15,16 @@ struct stack {
 #define POP(x) ((x).values[--(x).top])
 #define PUSH(x, y) ((x).values[(x).top++] = y)
 
+#define FIFO_SIZE 16
 struct fifo {
 	int write;
 	int read;
-	int64_t values[STACK_SIZE];
+	int64_t values[FIFO_SIZE];
 };
-#define PUT(f, v) ((f).values[(f).write++] = v)
-#define GET(f) ((f).values[(f).read++])
-#define EMPTY(f) ((f).write == (f).read)
 
-// Forward declaration
-int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struct fifo * outputs);
+#define PUT(f, v) ((f).values[((f).write < (FIFO_SIZE)) ? (f).write++ : ((f).write = 0)] = v)
+#define GET(f) ((f).values[((f).read < (FIFO_SIZE)) ? (f).read++ : ((f).read = 0)])
+#define EMPTY(f) ((f).write == (f).read)
 
 struct intcode_machine {
 	int64_t * mem;
@@ -34,12 +33,16 @@ struct intcode_machine {
 	struct fifo outputs;
 	struct fifo * inputs_ptr;
 	struct fifo * outputs_ptr;
-	int relative_base;
+	int64_t relative_base;
 };
+
+// Forward declaration
+int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struct fifo * outputs, struct intcode_machine * m);
 
 struct intcode_machine * new_intcode_machine(int64_t * original_intcode, int size, int64_t * inputs, int ninputs, int extra_mem)
 {
 	struct intcode_machine * m = calloc(sizeof(struct intcode_machine), 1);
+	//printf("Alloc %ld\n", (size * sizeof(int64_t)) * (1 + extra_mem));
 	m->mem = calloc(size * sizeof(int64_t), 1 + extra_mem);
 	memcpy(m->mem, original_intcode, size * sizeof(int64_t));
 	m->prog_ctr = &m->mem[0];
@@ -64,10 +67,10 @@ struct intcode_machine * new_intcode_machine(int64_t * original_intcode, int siz
 
 int64_t run_machine(struct intcode_machine * m)
 {
-	return run_prog(m->mem, &m->prog_ctr, m->inputs_ptr, m->outputs_ptr);
+	return run_prog(m->mem, &m->prog_ctr, m->inputs_ptr, m->outputs_ptr, m);
 }
 
-int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struct fifo * outputs)
+int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struct fifo * outputs, struct intcode_machine * m)
 {
 	int64_t * p = &mem[0];
 	if (prog_ctr) {
@@ -76,7 +79,7 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 	int64_t opvals[MAX_OPERANDS + 1] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
 	int64_t * opptrs[MAX_OPERANDS + 1] = { [0 ... (MAX_OPERANDS - 1)] = 0 };
 	int64_t opcode;
-	int baseoffset = 0;
+
 	while (1) {
 		opcode = *p % 100;
 		char modestring[MAX_OPERANDS * 2];
@@ -94,13 +97,23 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 					break;
 				}
 				case '2': { // relative baseptr
-					opptrs[idx] = &mem[p[idx] + baseoffset];
+					opptrs[idx] = &mem[p[idx] + m->relative_base];
+					if (4 == opcode && *opptrs[1] == 5185) {
+						/*
+						printf("base %ld\n", m->relative_base);
+						printf("idx %ld\n", idx);
+						printf("mem %p\n", mem);
+						*/
+					}
 					break;
 				}
 				default: {
 					printf("Unknown parameter mode: %c\n", modestring[i]);
 					return -1;
 				}
+			}
+			if (4 == opcode && *opptrs[1] == 5185) {
+				printf(">> %ld %c\n", opcode, modestring[i]);
 			}
 		}
 
@@ -169,7 +182,8 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 				break;
 			}
 			case 9: { // adjust base offset
-				baseoffset += *opptrs[1];
+				m->relative_base += *opptrs[1];
+				//printf("adjust base %ld (%ld)\n", *opptrs[1], m->relative_base);
 				p += 2;
 				break;
 			}

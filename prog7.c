@@ -34,6 +34,7 @@ void run_feedbackloop(struct stack * order) {
 	}
 }
 
+struct intcode_machine slask;
 void runall(int64_t * set, int64_t firstinput, int nelements, struct stack * perms) {
 	struct fifo inputs = { 0, 0 };
 	struct fifo outputs = { 0, 0 };
@@ -43,7 +44,7 @@ void runall(int64_t * set, int64_t firstinput, int nelements, struct stack * per
 		if (*tmpset == -2) { tmpset++; continue; }
 		PUT(inputs, *tmpset);
 		PUT(inputs, firstinput);
-		run_prog(intcode_prog, NULL, &inputs, &outputs);
+		run_prog(intcode_prog, NULL, &inputs, &outputs, &slask);
 		ret = GET(outputs);
 		int64_t o = *tmpset;
 		*tmpset = -2;
@@ -64,6 +65,7 @@ void runall(int64_t * set, int64_t firstinput, int nelements, struct stack * per
 
 int main(int argc, char * argv[])
 {
+	slask.relative_base = 0;
 	int64_t comb[6] = { 0, 1, 2, 3, 4, -1 };
 	struct stack s = { 0, { 0 }};
 	runall(comb, 0, 5, &s);
