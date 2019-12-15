@@ -15,7 +15,7 @@ struct stack {
 #define POP(x) ((x).values[--(x).top])
 #define PUSH(x, y) ((x).values[(x).top++] = y)
 
-#define FIFO_SIZE 16
+#define FIFO_SIZE 4096
 struct fifo {
 	int write;
 	int read;
@@ -112,9 +112,6 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 					return -1;
 				}
 			}
-			if (4 == opcode && *opptrs[1] == 5185) {
-				printf(">> %ld %c\n", opcode, modestring[i]);
-			}
 		}
 
 		switch (opcode) {
@@ -142,6 +139,7 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 			}
 			case 4: { // output
 				//printf("out %ld (%p)\n", *opptrs[1], p);
+				//
 				PUT(*outputs, *opptrs[1]);
 				p += 2;
 				break;
