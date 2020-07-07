@@ -42,7 +42,7 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 struct intcode_machine * new_intcode_machine(int64_t * original_intcode, int size, int64_t * inputs, int ninputs, int extra_mem)
 {
 	struct intcode_machine * m = calloc(sizeof(struct intcode_machine), 1);
-	//printf("Alloc %ld\n", (size * sizeof(int64_t)) * (1 + extra_mem));
+//	printf("Alloc %ld\n", (size * sizeof(int64_t)) * (1 + extra_mem));
 	m->mem = calloc(size * sizeof(int64_t), 1 + extra_mem);
 	memcpy(m->mem, original_intcode, size * sizeof(int64_t));
 	m->prog_ctr = &m->mem[0];
@@ -83,7 +83,9 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 	while (1) {
 		opcode = *p % 100;
 		char modestring[MAX_OPERANDS * 2];
+		//printf("%ld - ", *p);
 		sprintf(modestring, "%0*ld", MAX_OPERANDS, *p / 100);
+		//printf("%s\n", modestring);
 		for (int64_t i = 0; modestring[i] != '\0'; i++) {
 			int64_t idx = MAX_OPERANDS - i; // modestring[0] is mode for operand 8, [1] is op 7 and so on...
 			switch (modestring[i]) {
@@ -130,7 +132,6 @@ int64_t run_prog(int64_t * mem, int64_t ** prog_ctr, struct fifo * inputs, struc
 					//printf("exit becuse missing indata\n");
 					*prog_ctr = p;
 					return 3;
-				} else {
 				}
 				*opptrs[1] = GET(*inputs);
 				//printf("in %ld\n", *opptrs[1]);

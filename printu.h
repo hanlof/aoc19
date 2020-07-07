@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <alloca.h>
 
 #define printfU(s, ...) { \
 	int n = 1 + snprintf(NULL, 0, s, __VA_ARGS__); \
