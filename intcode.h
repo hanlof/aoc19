@@ -1,12 +1,11 @@
 #include <stdint.h>
 #include <string.h>
 
-
 #define PROG_SIZE(x) (sizeof(x) / sizeof(int64_t))
 
 #define MAX_OPERANDS 4
 
-#define STACK_SIZE 16
+#define STACK_SIZE 3200
 
 struct stack {
 	int top;
